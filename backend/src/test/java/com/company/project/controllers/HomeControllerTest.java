@@ -27,7 +27,7 @@ class HomeControllerTest {
     @Test
     @DisplayName("showHome trả về Greeting khi tìm thấy trong database (id = 1)")
     void showHome_WhenGreetingExists_ShouldReturnGreeting() {
-        // Arrange
+        // Arrangee
         Greeting mockGreeting = new Greeting(1, "Hello from Docker!");
         when(greetingRepository.findById(1)).thenReturn(Optional.of(mockGreeting));
 
