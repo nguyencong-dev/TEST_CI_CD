@@ -14,6 +14,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.Optional;
+import java.util.Arrays;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -57,6 +58,41 @@ class HomeControllerWebTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.name").value("Not Found 😕"));
+    }
+
+    @Test
+    void getGreetings_ReturnsSortedDatabaseRecords() throws Exception {
+        when(greetingRepository.findAll()).thenReturn(Arrays.asList(
+                new Greeting(3, "MariaDB"), new Greeting(1, "Docker"), new Greeting(2, "Spring Boot")));
+
+        mockMvc.perform(get("/greetings"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("Docker"))
+                .andExpect(jsonPath("$[1].name").value("Spring Boot"))
+                .andExpect(jsonPath("$[2].name").value("MariaDB"));
+    }
+
+    @Test
+    void getGreetingById_ReturnsRecordOr404() throws Exception {
+        when(greetingRepository.findById(2)).thenReturn(Optional.of(new Greeting(2, "Spring Boot")));
+        when(greetingRepository.findById(99)).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/greetings/2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Spring Boot"));
+        mockMvc.perform(get("/greetings/99"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getSummary_ReturnsDatabaseCount() throws Exception {
+        when(greetingRepository.count()).thenReturn(3L);
+
+        mockMvc.perform(get("/summary"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.service").value("Greeting API"))
+                .andExpect(jsonPath("$.database").value("MariaDB"))
+                .andExpect(jsonPath("$.totalGreetings").value(3));
     }
 }
 

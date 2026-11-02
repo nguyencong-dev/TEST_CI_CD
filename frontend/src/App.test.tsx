@@ -1,43 +1,44 @@
-import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
-import App from './App';
+import React from "react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import App from "./App";
 
-describe('App Component Unit Tests', () => {
-  beforeEach(() => {
-    jest.restoreAllMocks();
-  });
+const greetings = [
+  { id: 1, name: "Docker" },
+  { id: 2, name: "Spring Boot" },
+  { id: 3, name: "MariaDB" },
+];
+const summary = { service: "Greeting API", database: "MariaDB", totalGreetings: 3 };
 
-  test('Hiển thị link Learn React và trạng thái Loading ban đầu', () => {
-    // Giả lập fetch đang pending
-    jest.spyOn(global, 'fetch').mockImplementation(() => new Promise(() => {}));
+beforeEach(() => jest.restoreAllMocks());
 
-    render(<App />);
+test("shows loading and requests both database endpoints", async () => {
+  const fetchMock = jest.spyOn(global, "fetch")
+    .mockResolvedValueOnce({ ok: true, json: async () => greetings } as Response)
+    .mockResolvedValueOnce({ ok: true, json: async () => summary } as Response);
 
-    expect(screen.getByText(/learn react/i)).toBeInTheDocument();
-    expect(screen.getByText(/loading\.\.\./i)).toBeInTheDocument();
-  });
+  render(<App />);
+  expect(screen.getByText("Đang tải dữ liệu từ API...")).toBeInTheDocument();
+  await screen.findByText("API hoạt động");
+  expect(fetchMock).toHaveBeenCalledWith("/api/greetings");
+  expect(fetchMock).toHaveBeenCalledWith("/api/summary");
+  expect(screen.getByText("3 mục")).toBeInTheDocument();
+});
 
-  test('Hiển thị thông tin chào mừng khi API fetch thành công', async () => {
-    // Giả lập API /api trả về { id: 1, name: "Docker Compose" }
-    jest.spyOn(global, 'fetch').mockResolvedValueOnce({
-      json: async () => ({ id: 1, name: 'Docker Compose' }),
-    } as Response);
+test("selects a different database record", async () => {
+  jest.spyOn(global, "fetch")
+    .mockResolvedValueOnce({ ok: true, json: async () => greetings } as Response)
+    .mockResolvedValueOnce({ ok: true, json: async () => summary } as Response);
 
-    render(<App />);
+  render(<App />);
+  await screen.findByText("API hoạt động");
+  fireEvent.click(screen.getByRole("button", { name: /02 Spring Boot/ }));
+  expect(screen.getByText("/greetings/2")).toBeInTheDocument();
+  expect(screen.getByText(/ID 2 được đọc từ MariaDB/)).toBeInTheDocument();
+});
 
-    await waitFor(() => {
-      expect(screen.getByText('Hello from Docker Compose')).toBeInTheDocument();
-    });
-  });
-
-  test('Vẫn giữ trạng thái Loading khi gọi API bị lỗi', async () => {
-    // Ẩn log console.error khi giả lập lỗi mạng
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    jest.spyOn(global, 'fetch').mockRejectedValueOnce(new Error('Network error'));
-
-    render(<App />);
-
-    expect(screen.getByText(/loading\.\.\./i)).toBeInTheDocument();
-    consoleSpy.mockRestore();
-  });
+test("shows a useful error when API returns failure", async () => {
+  jest.spyOn(global, "fetch").mockResolvedValue({ ok: false, status: 503 } as Response);
+  render(<App />);
+  await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("HTTP 503"));
+  expect(screen.getByText("API lỗi")).toBeInTheDocument();
 });
