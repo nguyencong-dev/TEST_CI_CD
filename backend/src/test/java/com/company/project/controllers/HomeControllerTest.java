@@ -50,7 +50,7 @@ class HomeControllerTest {
         // Act
         Greeting result = homeController.showHome(null, null);
 
-        // Assert
+        // Assertt
         assertNotNull(result);
         assertEquals("Not Found 😕", result.getName());
         verify(greetingRepository, times(1)).findById(1);
