@@ -1,0 +1,39 @@
+name: CD Pipeline
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-backend:
+    name: Deploy backend to VMware Ubuntu
+    if: >-
+      ${{
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.head_repository.full_name == github.repository
+      }}
+    runs-on: [self-hosted, Linux, X64]
+
+    steps:
+      - name: Checkout commit that passed CI
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Build backend image
+        run: docker build -t react-java-backend:local ./backend
+
+      - name: Deploy backend and database
+        run: docker compose -f /home/nguyencong/backend-service/docker-compose.yml up -d
+
+      - name: Check backend response
+        run: |
+          curl --fail --show-error --silent \
+            --retry 12 --retry-delay 5 --retry-connrefused \
+            http://localhost:8080/
