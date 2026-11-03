@@ -33,7 +33,7 @@ public class HomeController {
         result.sort(Comparator.comparingInt(Greeting::getId));
         return result;
     }
-
+    //sdfdss
     @GetMapping("/greetings/{id}")
     public ResponseEntity<Greeting> greeting(@PathVariable int id) {
         return repository.findById(id)
